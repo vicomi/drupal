@@ -1,0 +1,5 @@
+name = Vicomi
+description = A block module that show Vicomi.com comments.
+core = 7.x
+    
+configure = admin/config/content/vicomi

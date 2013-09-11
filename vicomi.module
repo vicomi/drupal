@@ -1,0 +1,161 @@
+<?php
+
+/**
+* Implements hook_help.
+*
+* Displays help and module information.
+    *
+    * @param path
+    * Which path of the site we're using to display help
+    * @param arg
+    * Array that holds the current path as returned from arg() function
+    */
+    function vicomi_help($path, $arg) {
+    switch ($path) {
+    case "admin/help#vicomi":
+    return '
+    
+    '. t("Displays links to nodes created on this date") .'
+    
+    ';
+    break;
+    }
+    }
+    
+    /**
+    * Implements hook_block_info().
+    */
+    function vicomi_block_info() {
+    $blocks['vicomi'] = array(
+    'info' => t('vicomi'), //The name that will appear in the block list.
+    'cache' => DRUPAL_CACHE_PER_ROLE, //Default
+    );
+    return $blocks;
+    
+    }
+    
+    /**
+    * Custom content function.
+    *
+    * Set beginning and end dates, retrieve posts from database
+* saved in that time period.
+*
+* @return
+* A result set of the targeted posts.
+*/
+function vicomi_contents(){
+    //Get today's date.
+	$token = variable_get('vicomi_max');
+	return $token;
+}
+/**
+* Implements hook_block_view().
+*
+* Prepares the contents of the block.
+*/
+function vicomi_block_view($delta = '') {
+    
+	switch($delta){
+        case 'vicomi':
+            $block['subject'] = t('vicomi');
+            if(user_access('access content')){
+                //Use our custom function to retrieve data.
+                $token = vicomi_contents();
+                
+                if (empty($token)) { //No content in the last week.
+                    $block['content'] = t('Create a Vicomi Token at Vicomi.com.');
+                }
+                    else {
+                        
+                        $block['content'] = '<div id="vc-recommend-iframe-wrapper" style="height:300px"></div><div id="vc-comments-iframe-wrapper"></div><script type="text/javascript" src="http://api.vicomi.com/embed/widgets.js?access_token='.$token.'"></script>';
+                    }
+                    }
+                    
+                    
+                    }
+                    return $block;
+                    }
+                    
+                    
+                    function vicomi_menu() {
+                        $items = array();
+                        
+                        $items['admin/config/content/vicomi'] = array(
+                                                                      'title' => 'vicomi',
+                                                                      'description' => 'Configuration for vicomi module',
+                                                                      'page callback' => 'drupal_get_form',
+                                                                      'page arguments' => array('vicomi_form'),
+                                                                      'access arguments' => array('access administration pages'),
+                                                                      'type' => MENU_NORMAL_ITEM,
+                                                                      );
+                        $items['vicomi'] = array(
+                                                 'title' => 'vicomi',
+                                                 'page callback' => '_vicomi_page',
+                                                 'access arguments' => array('access vicomi content'),
+                                                 'type' => MENU_NORMAL_ITEM, //Will appear in Navigation menu.
+                                                 );
+                        
+                        return $items;
+                    }
+                    
+                    function vicomi_form($form, &$form_state) {
+                        $form['vicomi_max'] = array(
+                                                    '#type' => 'textfield',
+                                                    '#title' => t('Vicomi Token'),
+                                                    '#default_value' => variable_get('vicomi_max', 'Enter_Vicomi_DRUPAL_TOKEN'),
+                                                    '#size' => 32,
+                                                    '#maxlength' => 32,
+                                                    '#description' => t('Please past the Vicomi Token you have recieved. The token can be obtained for FREE at  <a href="http://www.vicomi.com">Vicomi.com</a>.'),
+                                                    '#required' => TRUE,
+                                                    );
+                        
+                        return system_settings_form($form);
+                    }
+                    
+                    
+                    function vicomi_form_validate($form, &$form_state){
+                        $max_num = $form_state['values']['vicomi_max'];
+                        if(empty($max_num)){
+                            form_set_error('vicomi_max', t('You must enter the Vicomi Token.'));
+                        }
+                            
+                            }
+                            
+                            function current_posts_permission() {
+                                return array(
+                                             'access vicomi content' => array(
+                                                                              'title' => t('Access content for the Vicomi module'),
+                                                                              )
+                                             );
+                            }
+                            
+                            
+                            
+                            function _vicomi_page() {
+                                $result = vicomi_contents('page');
+                                //Array to contain items for the page to render.
+                                $items = array();
+                                //Iterate over the resultset and format as links.
+                                foreach ($result as $node) {
+                                    $items[] = array(
+                                                     'data' => l($node->title, 'node/' . $node->nid),
+                                                     ); 
+                                }
+                                if (empty($items)) { //No content in the last week.
+                                    $page_array['vicomi_arguments'] = array(
+                                                                            //Title serves as page subtitle
+                                                                            '#title' => t('All posts from the last week'),
+                                                                            '#markup' => t('No posts available.'),
+                                                                            );
+                                    return $page_array;  
+                                } 
+                                    else {
+                                        $page_array['vicomi_arguments'] = array(
+                                                                                '#title' => t('All posts from the last week'),
+                                                                                '#items' => $items,
+                                                                                //Theme hook with suggestion.  
+                                                                                '#theme' => 'item_list__vicomi',
+                                                                                );
+                                        return $page_array;
+                                    }
+                                }
